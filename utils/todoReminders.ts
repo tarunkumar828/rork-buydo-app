@@ -84,9 +84,13 @@ export async function scheduleTodoReminderNotification(todo: TodoTask): Promise<
       title: 'Reminder',
       body: todo.title,
       sound: true,
+      ...(Platform.OS === 'android' ? { channelId: ANDROID_CHANNEL_ID } : {}),
       data: { todoId: todo.id },
     },
-    trigger: when,
+    trigger: {
+      type: 'date',
+      date: when,
+    },
   });
 
   return { notificationId, reminderAt: when.toISOString() };
