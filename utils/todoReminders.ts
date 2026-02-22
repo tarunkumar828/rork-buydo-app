@@ -79,18 +79,25 @@ export async function scheduleTodoReminderNotification(todo: TodoTask): Promise<
     when = new Date(now.getTime() + 60_000);
   }
 
+  const trigger: Notifications.NotificationTriggerInput = Platform.OS === 'android'
+    ? {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: when.getTime(),
+        channelId: ANDROID_CHANNEL_ID,
+      }
+    : {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: when.getTime(),
+      };
+
   const notificationId = await Notifications.scheduleNotificationAsync({
     content: {
       title: 'Reminder',
       body: todo.title,
-      sound: true,
+      sound: 'default',
       data: { todoId: todo.id },
     },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: when,
-      ...(Platform.OS === 'android' ? { channelId: ANDROID_CHANNEL_ID } : {}),
-    },
+    trigger,
   });
 
   return { notificationId, reminderAt: when.toISOString() };
