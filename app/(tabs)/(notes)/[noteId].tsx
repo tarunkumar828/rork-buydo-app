@@ -114,7 +114,7 @@ export default function NoteEditorScreen() {
       if (Platform.OS !== 'web') {
         const noteDir = new Directory(Paths.document, 'notes', noteId);
         if (!noteDir.exists) {
-          noteDir.create();
+          noteDir.create({ intermediates: true });
         }
 
         const ext = (asset.fileName?.split('.').pop() || 'jpg').replace(/[^a-z0-9]/gi, '');
