@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import createContextHook from '@nkzw/create-context-hook';
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import { Directory, Paths } from 'expo-file-system';
 import { Store, ShoppingItem, TodoTask, Note, NoteBlock, Priority } from '@/types';
 import { seedStores, seedItems, seedTodos, seedNotes } from '@/mocks/seeds';
 import { ensureNoteBlocks, notePlainText } from '@/utils/notes';
@@ -229,7 +229,7 @@ export const [BuydoProvider, useBuydo] = createContextHook(() => {
   const addNote = useCallback((title: string, blocks?: NoteBlock[]) => {
     const now = new Date().toISOString();
     const id = generateId();
-    const ensuredBlocks = blocks && blocks.length > 0 ? blocks : [{ id: `${id}-text-0`, type: 'text', text: '' }];
+    const ensuredBlocks: NoteBlock[] = blocks && blocks.length > 0 ? blocks : [{ id: `${id}-text-0`, type: 'text' as const, text: '' }];
     const newNote: Note = {
       id,
       title,
@@ -264,8 +264,14 @@ export const [BuydoProvider, useBuydo] = createContextHook(() => {
     });
 
     if (Platform.OS !== 'web') {
-      const dir = `${FileSystem.documentDirectory ?? ''}notes/${id}`;
-      FileSystem.deleteAsync(dir, { idempotent: true }).catch(() => {});
+      try {
+        const dir = new Directory(Paths.document, 'notes', id);
+        if (dir.exists) {
+          dir.delete();
+        }
+      } catch (e) {
+        console.log('Failed to delete note directory:', e);
+      }
     }
   }, []);
 

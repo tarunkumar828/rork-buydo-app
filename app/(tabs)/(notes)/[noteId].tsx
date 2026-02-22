@@ -15,7 +15,7 @@ import { ImagePlus, Trash2, Type } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import { Directory, File, Paths } from 'expo-file-system';
 import Colors from '@/constants/colors';
 import { useBuydo } from '@/hooks/useBuydoStore';
 import type { NoteBlock } from '@/types';
@@ -112,15 +112,17 @@ export default function NoteEditorScreen() {
 
       let uri = asset.uri;
       if (Platform.OS !== 'web') {
-        const baseDir = FileSystem.documentDirectory ?? '';
-        const noteDir = `${baseDir}notes/${noteId}`;
-        await FileSystem.makeDirectoryAsync(noteDir, { intermediates: true });
+        const noteDir = new Directory(Paths.document, 'notes', noteId);
+        if (!noteDir.exists) {
+          noteDir.create();
+        }
 
         const ext = (asset.fileName?.split('.').pop() || 'jpg').replace(/[^a-z0-9]/gi, '');
         const filename = `img-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}.${ext || 'jpg'}`;
-        const target = `${noteDir}/${filename}`;
-        await FileSystem.copyAsync({ from: uri, to: target });
-        uri = target;
+        const sourceFile = new File(uri);
+        const targetFile = new File(noteDir, filename);
+        sourceFile.copy(targetFile);
+        uri = targetFile.uri;
       }
 
       const aspectRatio = asset.width && asset.height ? asset.width / asset.height : undefined;
