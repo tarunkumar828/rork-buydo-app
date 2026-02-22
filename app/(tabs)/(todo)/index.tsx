@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Alert, Platform, Switch } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Priority } from '@/types';
@@ -9,6 +9,7 @@ import EmptyState from '@/components/EmptyState';
 import FAB from '@/components/FAB';
 import FormModal from '@/components/FormModal';
 import FormInput from '@/components/FormInput';
+import { ensureTodoReminderPermission, parseReminderTimeHHMM, todoRemindersSupported } from '@/utils/todoReminders';
 
 const PRIORITY_OPTIONS: { value: Priority; label: string; color: string }[] = [
   { value: 'high', label: 'High', color: Colors.priorityHigh },
@@ -33,12 +34,16 @@ export default function TodoScreen() {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('medium');
   const [dueDate, setDueDate] = useState('');
+  const [remind, setRemind] = useState(false);
+  const [reminderTime, setReminderTime] = useState('09:00');
 
   const resetForm = () => {
     setTitle('');
     setDescription('');
     setPriority('medium');
     setDueDate('');
+    setRemind(false);
+    setReminderTime('09:00');
     setEditingTodo(null);
   };
 
@@ -55,21 +60,36 @@ export default function TodoScreen() {
     setDescription(todo.description ?? '');
     setPriority(todo.priority);
     setDueDate(todo.dueDate ? new Date(todo.dueDate).toISOString().split('T')[0] : '');
+    setRemind(!!todo.remind);
+    setReminderTime(todo.reminderTime?.trim() || '09:00');
     setModalVisible(true);
   };
 
   const handleSubmit = () => {
     if (!title.trim()) return;
     const parsedDate = dueDate.trim() ? new Date(dueDate.trim()).toISOString() : undefined;
+    if (remind && !parsedDate) {
+      Alert.alert('Add a due date', 'Reminders need a due date (YYYY-MM-DD).');
+      return;
+    }
+    if (remind) {
+      const parsedTime = parseReminderTimeHHMM(reminderTime);
+      if (!parsedTime) {
+        Alert.alert('Invalid time', 'Reminder time must be in 24h format like 09:00 or 18:30.');
+        return;
+      }
+    }
     if (editingTodo) {
       updateTodo(editingTodo, {
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
         dueDate: parsedDate,
+        remind,
+        reminderTime: reminderTime.trim() || '09:00',
       });
     } else {
-      addTodo(title.trim(), priority, description.trim() || undefined, parsedDate);
+      addTodo(title.trim(), priority, description.trim() || undefined, parsedDate, remind, reminderTime.trim() || '09:00');
     }
     setModalVisible(false);
     resetForm();
@@ -180,9 +200,59 @@ export default function TodoScreen() {
           label="Due Date"
           placeholder="YYYY-MM-DD"
           value={dueDate}
-          onChangeText={setDueDate}
+          onChangeText={(v) => {
+            setDueDate(v);
+            if (!v.trim()) setRemind(false);
+          }}
           keyboardType={Platform.OS === 'web' ? 'default' : 'numbers-and-punctuation'}
         />
+
+        {Platform.OS !== 'web' && (
+          <View style={styles.remindRow}>
+            <View style={styles.remindTextCol}>
+              <Text style={styles.remindLabel}>REMIND ME</Text>
+              <Text style={styles.remindSubtext}>At {reminderTime || '09:00'} on the due date</Text>
+            </View>
+            <Switch
+              value={remind}
+              onValueChange={(next) => {
+                if (!next) {
+                  setRemind(false);
+                  return;
+                }
+                if (!dueDate.trim()) {
+                  Alert.alert('Set a due date first', 'Add a due date to enable reminders.');
+                  return;
+                }
+                if (!todoRemindersSupported()) {
+                  Alert.alert('Not supported', 'Reminders are not supported on this platform.');
+                  return;
+                }
+                void (async () => {
+                  const ok = await ensureTodoReminderPermission();
+                  if (!ok) {
+                    Alert.alert('Notifications disabled', 'Enable notification permission to get reminders.');
+                    setRemind(false);
+                    return;
+                  }
+                  setRemind(true);
+                })();
+              }}
+              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
+              thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+            />
+          </View>
+        )}
+
+        {Platform.OS !== 'web' && remind && (
+          <FormInput
+            label="Reminder Time"
+            placeholder="HH:MM (24h) e.g. 09:00"
+            value={reminderTime}
+            onChangeText={setReminderTime}
+            keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'numeric'}
+          />
+        )}
       </FormModal>
     </View>
   );
@@ -265,5 +335,31 @@ const styles = StyleSheet.create({
   priorityText: {
     fontSize: 14,
     color: Colors.textSecondary,
+  },
+  remindRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+  },
+  remindTextCol: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  remindLabel: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: Colors.textSecondary,
+    letterSpacing: 0.5,
+  },
+  remindSubtext: {
+    marginTop: 4,
+    fontSize: 13,
+    color: Colors.textTertiary,
   },
 });

@@ -24,6 +24,25 @@ export interface TodoTask {
   description?: string;
   priority: Priority;
   dueDate?: string;
+  /**
+   * If true, the app will try to schedule a local notification reminder.
+   * (No-op on web; requires notification permission on device.)
+   */
+  remind?: boolean;
+  /**
+   * Reminder time in 24h format (HH:MM). Used together with `dueDate`.
+   * Defaults to "09:00" when not provided.
+   */
+  reminderTime?: string;
+  /**
+   * ISO timestamp when the reminder should fire (computed from dueDate).
+   */
+  reminderAt?: string;
+  /**
+   * Identifier returned by `expo-notifications` for the scheduled notification,
+   * used to cancel/reschedule.
+   */
+  reminderNotificationId?: string;
   isCompleted: boolean;
   createdAt: string;
 }

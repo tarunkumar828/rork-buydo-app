@@ -16,10 +16,10 @@ export const seedItems: ShoppingItem[] = [
 ];
 
 export const seedTodos: TodoTask[] = [
-  { id: 't1', title: 'Schedule dentist appointment', priority: 'high', isCompleted: false, createdAt: new Date().toISOString() },
-  { id: 't2', title: 'Renew car registration', description: 'Due by end of month', priority: 'high', dueDate: new Date(Date.now() + 7 * 86400000).toISOString(), isCompleted: false, createdAt: new Date().toISOString() },
-  { id: 't3', title: 'Clean garage', priority: 'medium', isCompleted: false, createdAt: new Date().toISOString() },
-  { id: 't4', title: 'Read new book', description: 'Start with chapter 1', priority: 'low', isCompleted: false, createdAt: new Date().toISOString() },
+  { id: 't1', title: 'Schedule dentist appointment', priority: 'high', isCompleted: false, createdAt: new Date().toISOString(), remind: false, reminderTime: '09:00' },
+  { id: 't2', title: 'Renew car registration', description: 'Due by end of month', priority: 'high', dueDate: new Date(Date.now() + 7 * 86400000).toISOString(), isCompleted: false, createdAt: new Date().toISOString(), remind: false, reminderTime: '09:00' },
+  { id: 't3', title: 'Clean garage', priority: 'medium', isCompleted: false, createdAt: new Date().toISOString(), remind: false, reminderTime: '09:00' },
+  { id: 't4', title: 'Read new book', description: 'Start with chapter 1', priority: 'low', isCompleted: false, createdAt: new Date().toISOString(), remind: false, reminderTime: '09:00' },
 ];
 
 export const seedNotes: Note[] = [

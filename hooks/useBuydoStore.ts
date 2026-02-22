@@ -7,6 +7,7 @@ import { Directory, Paths } from 'expo-file-system';
 import { Store, ShoppingItem, TodoTask, Note, NoteBlock, Priority } from '@/types';
 import { seedStores, seedItems, seedTodos, seedNotes } from '@/mocks/seeds';
 import { ensureNoteBlocks, notePlainText } from '@/utils/notes';
+import { cancelTodoReminderNotification, scheduleTodoReminderNotification } from '@/utils/todoReminders';
 
 const STORAGE_KEYS = {
   stores: 'buydo_stores',
@@ -190,9 +191,11 @@ export const [BuydoProvider, useBuydo] = createContextHook(() => {
     });
   }, []);
 
-  const addTodo = useCallback((title: string, priority: Priority, description?: string, dueDate?: string) => {
+  const addTodo = useCallback((title: string, priority: Priority, description?: string, dueDate?: string, remind?: boolean, reminderTime?: string) => {
     const newTodo: TodoTask = {
       id: generateId(), title, description, priority, dueDate,
+      remind: !!remind,
+      reminderTime: reminderTime?.trim() || '09:00',
       isCompleted: false, createdAt: new Date().toISOString(),
     };
     setTodos(prev => {
@@ -200,28 +203,117 @@ export const [BuydoProvider, useBuydo] = createContextHook(() => {
       syncTodos.mutate(updated);
       return updated;
     });
+
+    if (newTodo.remind && newTodo.dueDate) {
+      void (async () => {
+        const scheduled = await scheduleTodoReminderNotification(newTodo);
+        if (!scheduled) return;
+        setTodos(prev => {
+          const updated = prev.map(t => t.id === newTodo.id ? {
+            ...t,
+            reminderNotificationId: scheduled.notificationId,
+            reminderAt: scheduled.reminderAt,
+          } : t);
+          syncTodos.mutate(updated);
+          return updated;
+        });
+      })();
+    }
   }, []);
 
   const updateTodo = useCallback((id: string, updates: Partial<TodoTask>) => {
     setTodos(prev => {
-      const updated = prev.map(t => t.id === id ? { ...t, ...updates } : t);
+      const before = prev.find(t => t.id === id);
+      const updated = prev.map(t => {
+        if (t.id !== id) return t;
+        const merged: TodoTask = { ...t, ...updates };
+        if (!merged.remind || !merged.dueDate || merged.isCompleted) {
+          merged.reminderAt = undefined;
+          merged.reminderNotificationId = undefined;
+        }
+        return merged;
+      });
       syncTodos.mutate(updated);
+
+      const after = updated.find(t => t.id === id);
+      if (before && after) {
+        const shouldHaveReminder = !!after.remind && !!after.dueDate && !after.isCompleted;
+        const hadReminderId = before.reminderNotificationId;
+
+        if (!shouldHaveReminder) {
+          if (hadReminderId) void cancelTodoReminderNotification(hadReminderId);
+        } else {
+          void (async () => {
+            if (hadReminderId) await cancelTodoReminderNotification(hadReminderId);
+            const scheduled = await scheduleTodoReminderNotification(after);
+            if (!scheduled) return;
+            setTodos(current => {
+              const next = current.map(t => t.id === id ? {
+                ...t,
+                reminderNotificationId: scheduled.notificationId,
+                reminderAt: scheduled.reminderAt,
+              } : t);
+              syncTodos.mutate(next);
+              return next;
+            });
+          })();
+        }
+      }
       return updated;
     });
   }, []);
 
   const toggleTodoCompleted = useCallback((id: string) => {
     setTodos(prev => {
-      const updated = prev.map(t => t.id === id ? { ...t, isCompleted: !t.isCompleted } : t);
+      const before = prev.find(t => t.id === id);
+      const updated = prev.map(t => {
+        if (t.id !== id) return t;
+        const nextIsCompleted = !t.isCompleted;
+        const merged: TodoTask = { ...t, isCompleted: nextIsCompleted };
+        if (nextIsCompleted) {
+          merged.reminderAt = undefined;
+          merged.reminderNotificationId = undefined;
+        }
+        return merged;
+      });
       syncTodos.mutate(updated);
+
+      const after = updated.find(t => t.id === id);
+      if (before && after) {
+        const shouldHaveReminder = !!after.remind && !!after.dueDate && !after.isCompleted;
+        const hadReminderId = before.reminderNotificationId;
+
+        if (!shouldHaveReminder) {
+          if (hadReminderId) void cancelTodoReminderNotification(hadReminderId);
+        } else {
+          void (async () => {
+            if (hadReminderId) await cancelTodoReminderNotification(hadReminderId);
+            const scheduled = await scheduleTodoReminderNotification(after);
+            if (!scheduled) return;
+            setTodos(current => {
+              const next = current.map(t => t.id === id ? {
+                ...t,
+                reminderNotificationId: scheduled.notificationId,
+                reminderAt: scheduled.reminderAt,
+              } : t);
+              syncTodos.mutate(next);
+              return next;
+            });
+          })();
+        }
+      }
       return updated;
     });
   }, []);
 
   const deleteTodo = useCallback((id: string) => {
     setTodos(prev => {
+      const toDelete = prev.find(t => t.id === id);
       const updated = prev.filter(t => t.id !== id);
       syncTodos.mutate(updated);
+      if (toDelete?.reminderNotificationId) {
+        void cancelTodoReminderNotification(toDelete.reminderNotificationId);
+      }
       return updated;
     });
   }, []);
