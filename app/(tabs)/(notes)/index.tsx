@@ -3,14 +3,14 @@ import { View, ScrollView, StyleSheet, Text, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
-import { useSmartList } from '@/hooks/useSmartListStore';
+import { useBuydo } from '@/hooks/useBuydoStore';
 import NoteCard from '@/components/NoteCard';
 import EmptyState from '@/components/EmptyState';
 import FAB from '@/components/FAB';
 
 export default function NotesScreen() {
   const router = useRouter();
-  const { notes, addNote, deleteNote } = useSmartList();
+  const { notes, addNote, deleteNote } = useBuydo();
 
   const sortedNotes = useMemo(() => {
     return [...notes].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());

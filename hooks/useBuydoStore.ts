@@ -9,11 +9,11 @@ import { seedStores, seedItems, seedTodos, seedNotes } from '@/mocks/seeds';
 import { ensureNoteBlocks, notePlainText } from '@/utils/notes';
 
 const STORAGE_KEYS = {
-  stores: 'smartlist_stores',
-  items: 'smartlist_items',
-  todos: 'smartlist_todos',
-  notes: 'smartlist_notes',
-  seeded: 'smartlist_seeded',
+  stores: 'buydo_stores',
+  items: 'buydo_items',
+  todos: 'buydo_todos',
+  notes: 'buydo_notes',
+  seeded: 'buydo_seeded',
 };
 
 function generateId(): string {
@@ -54,7 +54,7 @@ async function initSeedIfNeeded(): Promise<boolean> {
   return false;
 }
 
-export const [SmartListProvider, useSmartList] = createContextHook(() => {
+export const [BuydoProvider, useBuydo] = createContextHook(() => {
   const queryClient = useQueryClient();
 
   const [stores, setStores] = useState<Store[]>([]);
@@ -263,7 +263,6 @@ export const [SmartListProvider, useSmartList] = createContextHook(() => {
       return updated;
     });
 
-    // Best-effort cleanup of any locally stored images for this note
     if (Platform.OS !== 'web') {
       const dir = `${FileSystem.documentDirectory ?? ''}notes/${id}`;
       FileSystem.deleteAsync(dir, { idempotent: true }).catch(() => {});

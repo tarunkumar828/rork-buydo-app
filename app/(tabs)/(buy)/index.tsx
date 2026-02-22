@@ -3,7 +3,7 @@ import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Alert } from 'rea
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Colors, { storeColors, storeIcons } from '@/constants/colors';
-import { useSmartList } from '@/hooks/useSmartListStore';
+import { useBuydo } from '@/hooks/useBuydoStore';
 import StoreCard from '@/components/StoreCard';
 import EmptyState from '@/components/EmptyState';
 import FAB from '@/components/FAB';
@@ -12,7 +12,7 @@ import FormInput from '@/components/FormInput';
 
 export default function BuyScreen() {
   const router = useRouter();
-  const { stores, getStoreItemCount, addStore, updateStore, deleteStore } = useSmartList();
+  const { stores, getStoreItemCount, addStore, updateStore, deleteStore } = useBuydo();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingStore, setEditingStore] = useState<string | null>(null);

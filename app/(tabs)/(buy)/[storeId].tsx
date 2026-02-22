@@ -3,7 +3,7 @@ import { View, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
-import { useSmartList } from '@/hooks/useSmartListStore';
+import { useBuydo } from '@/hooks/useBuydoStore';
 import ItemRow from '@/components/ItemRow';
 import EmptyState from '@/components/EmptyState';
 import FAB from '@/components/FAB';
@@ -12,7 +12,7 @@ import FormInput from '@/components/FormInput';
 
 export default function StoreDetailScreen() {
   const { storeId } = useLocalSearchParams<{ storeId: string }>();
-  const { stores, getStoreItems, addItem, updateItem, toggleItemPurchased, deleteItem } = useSmartList();
+  const { stores, getStoreItems, addItem, updateItem, toggleItemPurchased, deleteItem } = useBuydo();
 
   const store = stores.find(s => s.id === storeId);
   const allItems = getStoreItems(storeId ?? '');

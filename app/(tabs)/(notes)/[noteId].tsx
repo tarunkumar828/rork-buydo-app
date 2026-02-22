@@ -17,14 +17,14 @@ import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import Colors from '@/constants/colors';
-import { useSmartList } from '@/hooks/useSmartListStore';
+import { useBuydo } from '@/hooks/useBuydoStore';
 import type { NoteBlock } from '@/types';
 import { clamp, ensureNoteBlocks } from '@/utils/notes';
 
 export default function NoteEditorScreen() {
   const { noteId } = useLocalSearchParams<{ noteId: string }>();
   const router = useRouter();
-  const { notes, updateNote, deleteNote } = useSmartList();
+  const { notes, updateNote, deleteNote } = useBuydo();
 
   const note = useMemo(() => {
     const found = notes.find(n => n.id === noteId);

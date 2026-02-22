@@ -3,7 +3,7 @@ import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Alert, Platform }
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Priority } from '@/types';
-import { useSmartList } from '@/hooks/useSmartListStore';
+import { useBuydo } from '@/hooks/useBuydoStore';
 import TodoRow from '@/components/TodoRow';
 import EmptyState from '@/components/EmptyState';
 import FAB from '@/components/FAB';
@@ -17,7 +17,7 @@ const PRIORITY_OPTIONS: { value: Priority; label: string; color: string }[] = [
 ];
 
 export default function TodoScreen() {
-  const { todos, addTodo, updateTodo, toggleTodoCompleted, deleteTodo } = useSmartList();
+  const { todos, addTodo, updateTodo, toggleTodoCompleted, deleteTodo } = useBuydo();
 
   const sortedTodos = useMemo(() => {
     const active = todos.filter(t => !t.isCompleted);
