@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Alert, Platform, Switch } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Calendar, Clock } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { Priority } from '@/types';
 import { useBuydo } from '@/hooks/useBuydoStore';
@@ -34,17 +36,25 @@ export default function TodoScreen() {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('medium');
   const [dueDate, setDueDate] = useState('');
+  const [dueDateObj, setDueDateObj] = useState<Date | null>(null);
   const [remind, setRemind] = useState(false);
   const [reminderTime, setReminderTime] = useState('09:00');
+  const [reminderTimeObj, setReminderTimeObj] = useState<Date>(new Date(2000, 0, 1, 9, 0));
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const resetForm = () => {
     setTitle('');
     setDescription('');
     setPriority('medium');
     setDueDate('');
+    setDueDateObj(null);
     setRemind(false);
     setReminderTime('09:00');
+    setReminderTimeObj(new Date(2000, 0, 1, 9, 0));
     setEditingTodo(null);
+    setShowDatePicker(false);
+    setShowTimePicker(false);
   };
 
   const openAdd = () => {
@@ -59,9 +69,14 @@ export default function TodoScreen() {
     setTitle(todo.title);
     setDescription(todo.description ?? '');
     setPriority(todo.priority);
-    setDueDate(todo.dueDate ? new Date(todo.dueDate).toISOString().split('T')[0] : '');
+    const existingDate = todo.dueDate ? new Date(todo.dueDate).toISOString().split('T')[0] : '';
+    setDueDate(existingDate);
+    setDueDateObj(existingDate ? new Date(existingDate + 'T12:00:00') : null);
     setRemind(!!todo.remind);
-    setReminderTime(todo.reminderTime?.trim() || '09:00');
+    const timeStr = todo.reminderTime?.trim() || '09:00';
+    setReminderTime(timeStr);
+    const [h, m] = timeStr.split(':').map(Number);
+    setReminderTimeObj(new Date(2000, 0, 1, h || 9, m || 0));
     setModalVisible(true);
   };
 
@@ -196,16 +211,68 @@ export default function TodoScreen() {
             </TouchableOpacity>
           ))}
         </View>
-        <FormInput
-          label="Due Date"
-          placeholder="YYYY-MM-DD"
-          value={dueDate}
-          onChangeText={(v) => {
-            setDueDate(v);
-            if (!v.trim()) setRemind(false);
-          }}
-          keyboardType={Platform.OS === 'web' ? 'default' : 'numbers-and-punctuation'}
-        />
+        {Platform.OS === 'web' ? (
+          <FormInput
+            label="Due Date"
+            placeholder="YYYY-MM-DD"
+            value={dueDate}
+            onChangeText={(v) => {
+              setDueDate(v);
+              if (!v.trim()) setRemind(false);
+            }}
+          />
+        ) : (
+          <>
+            <Text style={styles.pickerLabel}>DUE DATE</Text>
+            <TouchableOpacity
+              style={styles.datePickerButton}
+              onPress={() => {
+                setShowDatePicker(true);
+                setShowTimePicker(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Calendar size={18} color={dueDateObj ? Colors.primary : Colors.textTertiary} />
+              <Text style={[
+                styles.datePickerButtonText,
+                dueDateObj && styles.datePickerButtonTextActive,
+              ]}>
+                {dueDateObj
+                  ? dueDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+                  : 'Select a date'}
+              </Text>
+              {dueDateObj && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setDueDate('');
+                    setDueDateObj(null);
+                    setRemind(false);
+                    setShowDatePicker(false);
+                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.clearBtnText}>Clear</Text>
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={dueDateObj || new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                minimumDate={new Date()}
+                onChange={(_event: DateTimePickerEvent, selected?: Date) => {
+                  if (Platform.OS === 'android') setShowDatePicker(false);
+                  if (selected) {
+                    setDueDateObj(selected);
+                    setDueDate(selected.toISOString().split('T')[0]);
+                  }
+                }}
+                accentColor={Colors.primary}
+              />
+            )}
+          </>
+        )}
 
         {Platform.OS !== 'web' && (
           <View style={styles.remindRow}>
@@ -245,13 +312,40 @@ export default function TodoScreen() {
         )}
 
         {Platform.OS !== 'web' && remind && (
-          <FormInput
-            label="Reminder Time"
-            placeholder="HH:MM (24h) e.g. 09:00"
-            value={reminderTime}
-            onChangeText={setReminderTime}
-            keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'numeric'}
-          />
+          <>
+            <Text style={styles.pickerLabel}>REMINDER TIME</Text>
+            <TouchableOpacity
+              style={styles.datePickerButton}
+              onPress={() => {
+                setShowTimePicker(true);
+                setShowDatePicker(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Clock size={18} color={Colors.primary} />
+              <Text style={[styles.datePickerButtonText, styles.datePickerButtonTextActive]}>
+                {reminderTimeObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+              </Text>
+            </TouchableOpacity>
+            {showTimePicker && (
+              <DateTimePicker
+                value={reminderTimeObj}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                is24Hour={false}
+                onChange={(_event: DateTimePickerEvent, selected?: Date) => {
+                  if (Platform.OS === 'android') setShowTimePicker(false);
+                  if (selected) {
+                    setReminderTimeObj(selected);
+                    const hh = String(selected.getHours()).padStart(2, '0');
+                    const mm = String(selected.getMinutes()).padStart(2, '0');
+                    setReminderTime(`${hh}:${mm}`);
+                  }
+                }}
+                accentColor={Colors.primary}
+              />
+            )}
+          </>
         )}
       </FormModal>
     </View>
@@ -361,5 +455,30 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 13,
     color: Colors.textTertiary,
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 16,
+  },
+  datePickerButtonText: {
+    flex: 1,
+    fontSize: 15,
+    color: Colors.textTertiary,
+  },
+  datePickerButtonTextActive: {
+    color: Colors.text,
+    fontWeight: '500' as const,
+  },
+  clearBtnText: {
+    fontSize: 13,
+    color: Colors.danger,
+    fontWeight: '600' as const,
   },
 });
