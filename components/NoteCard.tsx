@@ -58,7 +58,7 @@ export default function NoteCard({ note, onPress, onDelete }: NoteCardProps) {
             <Trash2 size={15} color={Colors.danger} />
           </TouchableOpacity>
         </View>
-        <Text style={styles.preview} numberOfLines={2}>{note.content}</Text>
+        <Text style={styles.preview} numberOfLines={2}>{note.content ?? ''}</Text>
         <Text style={styles.time}>{timeAgo(note.updatedAt)}</Text>
       </TouchableOpacity>
     </Animated.View>

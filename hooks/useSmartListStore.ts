@@ -2,8 +2,11 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import createContextHook from '@nkzw/create-context-hook';
-import { Store, ShoppingItem, TodoTask, Note, Priority } from '@/types';
+import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import { Store, ShoppingItem, TodoTask, Note, NoteBlock, Priority } from '@/types';
 import { seedStores, seedItems, seedTodos, seedNotes } from '@/mocks/seeds';
+import { ensureNoteBlocks, notePlainText } from '@/utils/notes';
 
 const STORAGE_KEYS = {
   stores: 'smartlist_stores',
@@ -81,7 +84,10 @@ export const [SmartListProvider, useSmartList] = createContextHook(() => {
 
   const notesQuery = useQuery({
     queryKey: ['notes'],
-    queryFn: () => loadData<Note>(STORAGE_KEYS.notes, seedNotes),
+    queryFn: async () => {
+      const loaded = await loadData<Note>(STORAGE_KEYS.notes, seedNotes);
+      return loaded.map(ensureNoteBlocks);
+    },
     enabled: storesQuery.isSuccess,
   });
 
@@ -220,9 +226,18 @@ export const [SmartListProvider, useSmartList] = createContextHook(() => {
     });
   }, []);
 
-  const addNote = useCallback((title: string, content: string) => {
+  const addNote = useCallback((title: string, blocks?: NoteBlock[]) => {
     const now = new Date().toISOString();
-    const newNote: Note = { id: generateId(), title, content, createdAt: now, updatedAt: now };
+    const id = generateId();
+    const ensuredBlocks = blocks && blocks.length > 0 ? blocks : [{ id: `${id}-text-0`, type: 'text', text: '' }];
+    const newNote: Note = {
+      id,
+      title,
+      blocks: ensuredBlocks,
+      content: notePlainText({ id, title, blocks: ensuredBlocks, createdAt: now, updatedAt: now }),
+      createdAt: now,
+      updatedAt: now,
+    };
     setNotes(prev => {
       const updated = [...prev, newNote];
       syncNotes.mutate(updated);
@@ -231,9 +246,11 @@ export const [SmartListProvider, useSmartList] = createContextHook(() => {
     return newNote;
   }, []);
 
-  const updateNote = useCallback((id: string, title: string, content: string) => {
+  const updateNote = useCallback((id: string, title: string, blocks: NoteBlock[]) => {
     setNotes(prev => {
-      const updated = prev.map(n => n.id === id ? { ...n, title, content, updatedAt: new Date().toISOString() } : n);
+      const updatedAt = new Date().toISOString();
+      const nextContent = notePlainText({ id, title, blocks, createdAt: updatedAt, updatedAt });
+      const updated = prev.map(n => n.id === id ? { ...n, title, blocks, content: nextContent, updatedAt } : n);
       syncNotes.mutate(updated);
       return updated;
     });
@@ -245,6 +262,12 @@ export const [SmartListProvider, useSmartList] = createContextHook(() => {
       syncNotes.mutate(updated);
       return updated;
     });
+
+    // Best-effort cleanup of any locally stored images for this note
+    if (Platform.OS !== 'web') {
+      const dir = `${FileSystem.documentDirectory ?? ''}notes/${id}`;
+      FileSystem.deleteAsync(dir, { idempotent: true }).catch(() => {});
+    }
   }, []);
 
   const getStoreItems = useCallback((storeId: string) => {

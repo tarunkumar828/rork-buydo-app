@@ -17,7 +17,7 @@ export default function NotesScreen() {
   }, [notes]);
 
   const handleAdd = () => {
-    const newNote = addNote('Untitled Note', '');
+    const newNote = addNote('Untitled Note');
     if (newNote) {
       router.push(`/${newNote.id}` as never);
     }
