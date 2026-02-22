@@ -10,10 +10,15 @@ export function todoRemindersSupported(): boolean {
 
 export async function ensureTodoReminderPermission(): Promise<boolean> {
   if (!todoRemindersSupported()) return false;
-  const current = await Notifications.getPermissionsAsync();
-  if (current.granted) return true;
-  const requested = await Notifications.requestPermissionsAsync();
-  return requested.granted;
+  try {
+    const current = await Notifications.getPermissionsAsync();
+    if (current.granted) return true;
+    const requested = await Notifications.requestPermissionsAsync();
+    return requested.granted;
+  } catch (e) {
+    console.log('Notification permissions not available:', e);
+    return false;
+  }
 }
 
 export function computeReminderDateFromDueDate(
@@ -42,10 +47,14 @@ export function parseReminderTimeHHMM(value?: string): { hour: number; minute: n
 async function ensureAndroidChannel(): Promise<void> {
   if (!todoRemindersSupported()) return;
   if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
-    name: 'Todo Reminders',
-    importance: Notifications.AndroidImportance.DEFAULT,
-  });
+  try {
+    await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
+      name: 'Todo Reminders',
+      importance: Notifications.AndroidImportance.DEFAULT,
+    });
+  } catch (e) {
+    console.log('Android notification channel not available:', e);
+  }
 }
 
 export async function cancelTodoReminderNotification(notificationId?: string): Promise<void> {
