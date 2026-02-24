@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Buydo",
-    "slug": "smartlist-app-25auqpk",
+    "slug": "com.rork.buydo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -15,14 +15,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.rork.smartlist-app-25auqpk"
+      "bundleIdentifier": "com.rork.buydo"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "app.rork.smartlist_app_25auqpk"
+      "package": "com.rork.buydo"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
