@@ -41,6 +41,12 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <StickyNote size={size} color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="index"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
